@@ -2,12 +2,13 @@
 
 //Funciones
 void wordCount(char* address, int sizeLimit);
+void NoSpace(char *text);
+void Reverse(char *text);
 
 
 void main()
 {
 	//Menu
-	
 }
 
 /*
@@ -41,4 +42,56 @@ void wordCount(char* address, int sizeLimit)
 		}
 	}
 	printf("\nPalabras con mas de %i caracteres: %d \nNumero de palabras: %d \n",sizeLimit,wordsOverLimit,wordCount);
+}
+
+void NoSpace(char *original){
+	FILE *f = fopen(original, "r");
+	FILE *g = fopen("sinespacios.txt", "w");
+	char c = 0;
+	if (f == NULL)
+	{
+		printf("Error opening file!\n");
+		exit(1);
+	}
+	while (c != EOF){
+		if ( (c = fgetc(f)) != -1){
+			if (c != 32 && c != 10)
+				fprintf(g, "%c", c);
+		}
+	}
+	fclose(g);
+	fclose(f);
+}
+
+void Reverse(char *original){
+	FILE *f = fopen(original, "r");
+	FILE *g = fopen("alreves.txt", "w");
+	char c = 0;
+	char *temp = NULL;
+	int cont = 0, i = 0;
+	
+	temp = (char*)malloc(sizeof(char));
+
+	if (f == NULL)
+	{
+		printf("Error opening file!\n");
+		exit(1);
+	}
+
+	while (c != EOF){
+		if ((c = fgetc(f)) != -1){
+			temp[cont] = c;
+			cont++;
+			temp = (char*)realloc(temp, (cont + 1) * sizeof(char));
+		}
+	}
+
+	fclose(f);
+	temp[cont] = 0;
+
+	for (i = cont - 1; i > -1; i--)
+		fprintf(g, "%c", temp[i]);
+
+	free(temp);
+	fclose(g);
 }
