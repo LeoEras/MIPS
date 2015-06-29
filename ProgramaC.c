@@ -23,6 +23,13 @@ void wordCount(char* address, int sizeLimit)
 	int characterCount = 0;
 	int wordsOverLimit = 0;	
 	int wordCount = 1;
+	
+	if (f == NULL)
+	{
+		printf("Error opening file!\n");
+		exit(1);
+	}
+	
 	while((character = fgetc(f)) != EOF)
 	{
 		characterCount++;
@@ -42,6 +49,7 @@ void wordCount(char* address, int sizeLimit)
 		}
 	}
 	printf("\nPalabras con mas de %i caracteres: %d \nNumero de palabras: %d \n",sizeLimit,wordsOverLimit,wordCount);
+	fclose(f);
 }
 
 void NoSpace(char *original){
