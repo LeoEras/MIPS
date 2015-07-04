@@ -49,7 +49,7 @@ void Menu(char *rut) {
 
         case 3:
             system("cmd /c cls");
-            printf("\n__________------ARCHIVO SIN ESPACIOS-------__________ \n\n");
+            printf("\n__________------  ARCHIVO AL REVES  -------__________ \n\n");
             Reverse(rut);
             break;
 
