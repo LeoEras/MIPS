@@ -1,7 +1,10 @@
 .data 
 buffer: .space 500		# "buffer" contendrá la dirección base al string del archivo
-file: .ascii "C://Users//Juan Jose//Desktop//Data.txt" # Dirección absoluta del archivo
+file:   .ascii "C://Users//Juan Jose//Desktop//Data.txt" # Dirección absoluta del archivo
 
+cons1:  .word 32
+cons2:  .word 13
+cons3:  .word 3
 .text
 
 open: 	la $a0,file  		# file contiene la dirección del string en memoria; Ese string es la dirección absoluta de mi archivo.
@@ -21,20 +24,25 @@ read:	add $a0, $s0, $0	# Cargo en $a0 la direccion del file descriptor
 	
 # Variables utilizadas para contar el número de palabras	
 	add $s2, $v0, $0  	# Copio el número total de caracteres leidos al registro $s2
-	add $s3, $s3, $0	# Iterador a utilizar
-	addi $s4,$s4, 1		# Contador de espacios
-	addi $s5,$s5, 32	# valor entero del caracter espacio en ascii	
+	addi $s3,$0,0		# Iterador a utilizar
+	addi $s4,$0,1		# Contador de palabras
+	addi $s5,$0,0		# Contador de caracteres por palabra
+	addi $s6,$0,0		# Contador de palabras con más de "n" caracteres
 #-----------------------------------------------	
 	
-loop:	slt $t0, $s3, $s2  	# Verifico si llege al último caracter
+loop:	lw $t2, cons1
+	lw $t3, cons2
+	slt $t0, $s3, $s2  	# Verifico si llege al último caracter
 	beq $t0,$0,close	# Verifico si ya leí todos los caracteres
 	add $t1, $s3, $s1	# Sumo mi iterador a la direccion base del string que contiene el archivo
 	lb $t0, 0($t1)		# Cargo el i-esimo byte	en $t0
 	addi $s3, $s3, 1	# Incremento el iterador	
-	beq $t0, $s5, Up	# Verifico si el caracter leido es un espacio	
-	j loop
-				
-
+	beq $t0, $t2, Up	# Verifico si el caracter leido es un espacio	
+	beq $t0, $t3, Up	# Verifico si el catacter leido es un salto de linea
+	
+	beq $t0, $0, esp	# Verifico si es un EOF
+	addi $s5, $s5, 1	# Aumento, el contador de caracteres por palabra, en 1
+	j loop				
 
 close: 	li $v0, 16		# Constante para cerrar el archivo
 	add $a0, $s0, $0	# Dirección al "File Descriptor" del archivo a cerrar
@@ -47,5 +55,26 @@ print: 	li $v0,1		# Constante para imprimir enteros
 exit: 	li $v0, 10		# Constante para terminar el programa
 	syscall			
 
-Up: 	addi $s4, $s4, 1	# Aumenta el contador de palabras en 1
+Up: 	lw $t2, cons1
+	lw $t3, cons2
+	lw $t4, cons3
+	add $t1, $s3, $s1	# Sumo mi iterador a la direccion base del string que contiene el archivo
+	lb $t0, 0($t1)		# Cargo el i-esimo byte	en $t0
+	beq $t0, $t2, loop	# Verifico si el próximo catacter leido es un salto de linea
+	beq $t0, $t3, loop 	# Verifico si el próximo caracter leido es un espacio	
+	beq $t0, $0,  esp	# Verifico si es un EOF
+	addi $s4, $s4, 1	# Aumenta el contador de palabras en 1
+	addi $t4, $t4, 1
+	slt $t5, $s5,$t4  	# Verifico si excedo el número de caracteres por palabra
+	beq $t5, $0, found 	# Branch a Found si es que mi palabra tiene más de "n" caracteres
+	addi $s5, $0, 0		# Reseteo el contador de caracteres a 0
 	j loop						
+
+found:	addi $s6, $s6,1
+	addi $s5, $0, 0
+	j loop
+	
+esp:	slt $t5, $s5,$t4  	# Verifico si excedo el número de caracteres por palabra
+	beq $t5, $0, found 
+	addi $s5, $0, 0
+	j loop	
