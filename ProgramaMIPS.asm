@@ -1,5 +1,5 @@
 .data 
-buffer: .space 500		# "buffer" contendr√° la direcci√≥n base al string del archivo
+buffer: .space 3000		# "buffer" contendr√° la direcci√≥n base al string del archivo
 file: .asciiz "C://Users//Juan Jose//Desktop//Data.txt" # Direcci√≥n absoluta del archivo
 
 #text messages
@@ -10,6 +10,7 @@ optionText: .asciiz "Por favor, escoja una opci√≥n: "
 limitText:	.asciiz "\n Limite de caracteres: "
 continueMessage: .asciiz "Presione una tecla para continuar... "
 numberOfWords: .asciiz "\n El n˙mero de palabras es: "
+numberOfWordsMore: .asciiz "\n El n˙mero de palabras con m·s de n caracteres es: "
 
 #Title
 Maintext:       .asciiz "\n\n\n______-----  PROYECTO ORGANIZACI√ìN  -----______\n\n\n Ingresar nombre del archivo (ej: archivo.txt): \n\n"
@@ -20,9 +21,16 @@ TitleOp3text:	.asciiz "\n\n\n______-----  ARCHIVO AL REVES  -----______\n\n"
 TitleOp5text:	.asciiz "\n\n\n______----- Organizaci√≥n y Arquitectura de Computadores -----______\n\t\tProyecto del Primer Parcial\n\n\tDesarrolladores: \n\t\tLeonardo Eras Delgado\n\t\tJuan Garcia Cedeno\n\t\tVanessa Robles Sol√≠s\n\n"
 
 cons1:  .word 32
-cons2:  .word 13
-cons3:  .word 3
+cons2:  .word 13		
+cons3:  .word 3			# N˙mero de caracteres definidos por el usuario
 .text
+#---------------------CONSIDERACIONES--------------------------
+# $s0 = File Descriptor
+# $s1 = DirecciÛn base del buffer en memoria
+# $s2 = N˙mero total de caracteres leidos
+#--------------------------------------------------------------
+
+
 
 # Subrutine: main (Inicio del Programa)
 main:
@@ -122,7 +130,7 @@ open: 	la $a0,file  		# file contiene la direcci√≥n del string en memoria; Ese s
 # Subrutine:	
 read:	add $a0, $s0, $0	# Cargo en $a0 la direccion del file descriptor
 	la $a1, buffer		# Indico el buffer que almacenar√° los datos
-	li $a2, 50		# Indico el n√∫mero m√°ximo de bytes a leer
+	li $a2, 3000		# Indico el n√∫mero m√°ximo de bytes a leer
 	li $v0, 14		# Constante para leer un archivo
 	syscall
 	la $s1, buffer		# Copio la direcci√≥n del buffer, en memoria,  al resgistro $s1. Se acceder√° al archivo desde el registro $s1. Cada byte ser√° una letra
@@ -135,8 +143,8 @@ read:	add $a0, $s0, $0	# Cargo en $a0 la direccion del file descriptor
 	addi $s6,$0,0		# Contador de palabras con m·s de "n" caracteres
 #-----------------------------------------------	
 	
-loop:	lw $t2, cons1
-	lw $t3, cons2
+loop:	lw $t2, cons1		# Cargo el valor de 32 en la variable temporal $t2
+	lw $t3, cons2		# Cargo el valor de 13 en la variable temporal $t3
 	slt $t0, $s3, $s2  	# Verifico si llege al ˙ltimo caracter
 	beq $t0,$0,close	# Verifico si ya leÌ todos los caracteres
 	add $t1, $s3, $s1	# Sumo mi iterador a la direccion base del string que contiene el archivo
@@ -144,7 +152,6 @@ loop:	lw $t2, cons1
 	addi $s3, $s3, 1	# Incremento el iterador	
 	beq $t0, $t2, Up	# Verifico si el caracter leido es un espacio	
 	beq $t0, $t3, Up	# Verifico si el catacter leido es un salto de linea
-	
 	beq $t0, $0, esp	# Verifico si es un EOF
 	addi $s5, $s5, 1	# Aumento, el contador de caracteres por palabra, en 1
 	j loop					
@@ -162,10 +169,16 @@ print: 	li $v0, 4
 	li $v0,1		# Constante para imprimir enteros	
 	add $a0, $s4,$0		# $s4 contiene el n√∫mero total de palabras encontradas
 	syscall	
-
-# Subrutine:		
+	li $v0, 4		# Constante para imprimir strings	
+	la $a0, numberOfWordsMore # Cargo el string a imprimir en el registro $a0
+	syscall
+	li $v0,1		# Constante para imprimir enteros	
+	add $a0, $s6,$0		# $s6 contiene el n√∫mero total de palabras encontradas con m·s de n caracteres
+	syscall	
+	j Bucle	
+	
 exit: 	li $v0, 10		# Constante para terminar el programa
-	syscall			
+	syscall				
 
 Up: 	lw $t2, cons1
 	lw $t3, cons2
@@ -182,8 +195,8 @@ Up: 	lw $t2, cons1
 	addi $s5, $0, 0		# Reseteo el contador de caracteres a 0
 	j loop					
 
-found:	addi $s6, $s6,1
-	addi $s5, $0, 0
+found:	addi $s6, $s6,1		# Sumo el contador de palabras con m·s de n caracteres en 1
+	addi $s5, $0, 0		# Reinicio el contador de caracteres por palabra
 	j loop
 	
 esp:	slt $t5, $s5,$t4  	# Verifico si excedo el n˙mero de caracteres por palabra
