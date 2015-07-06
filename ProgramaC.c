@@ -14,8 +14,8 @@ void main() {
     system("cmd /c cls");
     printf("\n__________------ PROYECTO ORGANIZACIÓN -------__________ \n\n");
     printf("\n \n Ingresar nombre del archivo (ej: archivo.txt): \n\n");
-    scanf("%s", name);
-    Menu(name);
+    scanf("%s", &name);
+    Menu(&name);
 }
 
 void Menu(char *rut) {
