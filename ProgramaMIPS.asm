@@ -1,6 +1,8 @@
 .data 
-buffer: .space 500		# "buffer" contendr谩 la direcci贸n base al string del archivo
-file: .asciiz "C://Users//Juan Jose//Desktop//Data.txt" # Direcci贸n absoluta del archivo
+buffer: .space 255			# "buffer" contendr谩 la direcci贸n base al string del archivo
+file: .space 255 			# Direcci贸n absoluta del archivo
+fileToMem: .space 10000			#Archivo en memoria
+fwrite:	.asciiz "sinespacio.txt"     	# Archivo que arroja la funcion definida sinespacio
 
 #text messages
 errortext:      .asciiz "Ha ingresado un valor no valido\n"
@@ -10,6 +12,8 @@ optionText: .asciiz "Por favor, escoja una opci贸n: "
 limitText:	.asciiz "\n Limite de caracteres: "
 continueMessage: .asciiz "Presione una tecla para continuar... "
 numberOfWords: .asciiz "\n El n鷐ero de palabras es: "
+pedirArchivo: .asciiz "Ingrese nombre de archivo a abrir:\n"
+sinespacioMessage: .asciiz "Archivo creado con exito!\n"
 
 #Title
 Maintext:       .asciiz "\n\n\n______-----  PROYECTO ORGANIZACI脫N  -----______\n\n\n Ingresar nombre del archivo (ej: archivo.txt): \n\n"
@@ -19,9 +23,10 @@ TitleOp2text:	.asciiz "\n\n\n______-----  ARCHIVO SIN ESPACIOS  -----______\n\n"
 TitleOp3text:	.asciiz "\n\n\n______-----  ARCHIVO AL REVES  -----______\n\n"
 TitleOp5text:	.asciiz "\n\n\n______----- Organizaci贸n y Arquitectura de Computadores -----______\n\t\tProyecto del Primer Parcial\n\n\tDesarrolladores: \n\t\tLeonardo Eras Delgado\n\t\tJuan Garcia Cedeno\n\t\tVanessa Robles Sol铆s\n\n"
 
-cons1:  .word 32
+cons1:  .word 32	#Caracter de espacio
 cons2:  .word 13
 cons3:  .word 3
+spaces: .asciiz ""
 .text
 
 # Subrutine: main (Inicio del Programa)
@@ -34,6 +39,67 @@ mainMenu:
 	addi $sp, $sp, -4	#Copia de seguridad de la direcci贸n de la funci贸n que llama
 	sw $ra, 0($sp)
 	
+ask:					
+	add $t0, $zero, $zero
+	add $t1, $zero, $zero
+	add $t2, $zero, $zero
+	add $t3, $zero, $zero
+	add $t4, $zero, $zero
+	add $t5, $zero, $zero
+	
+	li $v0, 4		
+	la $a0,	pedirArchivo
+	syscall
+
+	li $v0, 8 		#Pedir archivo
+        la $a0, buffer		#Guarda ubicacion de archivo en memoria
+        li $a1, 255 		#Espacio maximo de nombre de archivo permitido
+        syscall
+        
+        la $t0, buffer
+        la $t1, file
+        add $t2, $t0, $zero
+        add $t3, $t1, $zero
+        addi $t4, $t4, 10
+clean:	
+	lbu $t5, 0($t2)
+	beq $t5, $t4, continue
+	sb $t5, 0($t3)
+	addi $t2, $t2, 1
+	addi $t3, $t3, 1
+	j clean
+
+continue:
+        #Revisa si existe el archivo ingresado
+	li $v0, 13		
+	la $a0, file
+	li $a1, 0			#Modo lectura
+	li $a2, 0
+	syscall
+	
+	add $s0, $v0, $zero		#Descriptor de archivo
+	slt $t0, $v0, $zero		#Si no encuentra el archivo, vuelve a preguntar por archivo
+	bne $t0, $zero, ask
+	
+	#El archivo existe! Copiar datos a memoria
+	#Lectura del archvo
+	li $v0, 14
+	add $a0, $s0, $zero
+	la $a1, spaces
+	li $a2, 10000
+	syscall
+	
+	la $s1, fileToMem		#base de memoria donde sera copiado el archivo
+	add $t0, $a1, $zero		#El archivo
+	add $t1, $s1, $zero		#Para recorrer fileToMem
+copy:	lbu $t2, 0($t0)
+	beq $t2, $zero, endCopy
+	sb $t2, 0($t1)
+	addi $t0, $t0, 1
+	addi $t1, $t1, 1
+	j copy
+	
+endCopy:	
 	Bucle:
 	li $v0, 4	
 			
@@ -73,6 +139,10 @@ mainMenu:
 		li $v0, 4	# Se carga el numero 4 para indicar que la funcion SYSCALL va a imprimir un texto.
 		la $a0, TitleOp2text
 		syscall
+		jal sinespacio
+		la $a0, sinespacioMessage
+		syscall
+		li $v0, 4
 		la $a0, continueMessage
 		syscall
 		li $v0, 12	# Se carga el numero 12 para indicar que la funcion SYSCALL va a leer un char.
@@ -164,9 +234,6 @@ print: 	li $v0, 4
 	syscall	
 
 # Subrutine:		
-exit: 	li $v0, 10		# Constante para terminar el programa
-	syscall			
-
 Up: 	lw $t2, cons1
 	lw $t3, cons2
 	lw $t4, cons3
@@ -189,4 +256,82 @@ found:	addi $s6, $s6,1
 esp:	slt $t5, $s5,$t4  	# Verifico si excedo el n鷐ero de caracteres por palabra
 	beq $t5, $0, found 
 	addi $s5, $0, 0
-	j loop	
+	j loop
+	
+#Subrutine Sinespacio:
+sinespacio:
+	addi $sp, $sp, -16
+	sw $v0, 12($sp)
+	sw $s2, 8($sp)
+	sw $s1, 4($sp)
+	sw $s0, 0($sp)
+	
+	add $t2, $zero, $zero
+	add $t3, $zero, $zero
+	
+	#Abre el archivo ingresado
+	li $v0, 13		
+	la $a0, file
+	li $a1, 0			#Modo lectura
+	li $a2, 0
+	syscall
+	
+	add $s0, $v0, $zero		#Descriptor de archivo
+	slt $t0, $v0, $zero		#Si no encuentra el archivo, salta a exit
+	bne $t0, $zero, readerror
+	
+	#Lectura del archivo ingresado
+	li $v0, 14
+	add $a0, $s0, $zero
+	la $a1, spaces
+	li $a2, 10000
+	syscall
+	
+	#Abre archivo de escritura
+	li $v0, 13
+	la $a0, fwrite
+	li $a1, 1
+	li $a2, 0
+	syscall
+	
+	add $s1, $v0, $zero		#Descriptor de "sinespacio.txt"
+	
+	#Variables necesarias para escribir
+	la $s2, spaces
+	addi $t2, $t2, 32		#Espacio en blanco a eliminar
+	addi $t3, $t3, 10		#Salto de linea a eliminar
+	add $t0, $s2, $zero		#Base de buffer (lo que haya en el archivo "Text.txt")
+	
+	add $a0, $s1, $zero		#Descriptor de "sinespacio.txt" copiado a $a0
+escritura:				#Escritura en archivo caracter a caracter
+	li $v0, 15
+	la $a1, 0($t0)			#Direccion del buffer
+	li $a2, 1			#Longitud a escribir (1 caracter a la vez)
+	lbu $t1, 0($t0)			#t1 = buffer[$t0]. Lo copia para luego comparar con espacio en blanco y salto de linea
+	addi $t0, $t0, 1		#$t0++
+	beq $t1, $t2, escritura		#Si el caracter leido es un espacio en blanco saltar
+	beq $t1, $t3, escritura		#Si el caracter leido es un salto de linea saltar
+	syscall				#Escribe en el archivo el caracter leido
+	bne $t1, $zero, escritura	#Termina sinespacio cuando se halla al caracter nulo
+	
+	#Cerrando los archivos	
+	add $a0, $s1, $zero
+	li $v0, 16
+	syscall			#Cierra "sinespacio.txt"
+	
+readerror:	
+	add $a0, $s0, $zero
+	li $v0, 16
+	syscall			#Cierra "Texto.txt"
+	
+	lw $s0, 0($sp)
+	lw $s1, 4($sp)
+	lw $s2, 8($sp)
+	lw $v0, 12($sp)
+	addi $sp, $sp, 16
+	
+	jr $ra
+
+exit: 	li $v0, 10		# Constante para terminar el programa
+	syscall			
+
