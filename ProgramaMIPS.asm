@@ -1,7 +1,6 @@
 .data 
 buffer: .space 255			# "buffer" contendr谩 la direcci贸n base al string del archivo
 file: .space 255 			# Direcci贸n absoluta del archivo
-fileToMem: .space 10000			#Archivo en memoria
 fwrite:	.asciiz "sinespacio.txt"     	# Archivo que arroja la funcion definida sinespacio
 
 #text messages
@@ -39,8 +38,9 @@ mainMenu:
 	addi $sp, $sp, -4	#Copia de seguridad de la direcci贸n de la funci贸n que llama
 	sw $ra, 0($sp)
 	
-ask:					
-	add $t0, $zero, $zero
+ask:	
+	#Iniciando temporales en 0 para volver a leer archivo en caso de error				
+	add $t0, $zero, $zero	
 	add $t1, $zero, $zero
 	add $t2, $zero, $zero
 	add $t3, $zero, $zero
@@ -48,7 +48,7 @@ ask:
 	add $t5, $zero, $zero
 	
 	li $v0, 4		
-	la $a0,	pedirArchivo
+	la $a0,	pedirArchivo	#Mensaje pedir archivo
 	syscall
 
 	li $v0, 8 		#Pedir archivo
@@ -88,18 +88,21 @@ continue:
 	la $a1, spaces
 	li $a2, 10000
 	syscall
+
+	add $a0, $s0, $zero
+	li $v0, 16
+	syscall			#Cierra "Texto.txt"
 	
-	la $s1, fileToMem		#base de memoria donde sera copiado el archivo
-	add $t0, $a1, $zero		#El archivo
-	add $t1, $s1, $zero		#Para recorrer fileToMem
-copy:	lbu $t2, 0($t0)
-	beq $t2, $zero, endCopy
-	sb $t2, 0($t1)
-	addi $t0, $t0, 1
-	addi $t1, $t1, 1
-	j copy
+	add $s0, $zero, $zero	#Numero de caracteres
+	add $s1, $a1, $zero	#Base del buffer de archivo
+	add $t0, $s1, $zero	#Para recorrer el buffer
+numcaracter:
+	lbu $t1, 0($t0)		#$t1 = $s0[$t0]
+	beq $t1, $zero, Bucle	#Si $t1 = '\0' terminar de contar
+	addi $t0, $t0, 1	#$t0 = $t0 + 1
+	addi $s0, $s0, 1	#$s0 = $s0 + 1
+	j numcaracter
 	
-endCopy:	
 	Bucle:
 	li $v0, 4	
 			
@@ -260,32 +263,14 @@ esp:	slt $t5, $s5,$t4  	# Verifico si excedo el n鷐ero de caracteres por palabra
 	
 #Subrutine Sinespacio:
 sinespacio:
-	addi $sp, $sp, -16
-	sw $v0, 12($sp)
-	sw $s2, 8($sp)
+	addi $sp, $sp, -12
+	sw $v0, 8($sp)
 	sw $s1, 4($sp)
 	sw $s0, 0($sp)
 	
+	add $s1, $a1, $zero		#Copia de buffer de archivo leido para usar en esta funcion
 	add $t2, $zero, $zero
 	add $t3, $zero, $zero
-	
-	#Abre el archivo ingresado
-	li $v0, 13		
-	la $a0, file
-	li $a1, 0			#Modo lectura
-	li $a2, 0
-	syscall
-	
-	add $s0, $v0, $zero		#Descriptor de archivo
-	slt $t0, $v0, $zero		#Si no encuentra el archivo, salta a exit
-	bne $t0, $zero, readerror
-	
-	#Lectura del archivo ingresado
-	li $v0, 14
-	add $a0, $s0, $zero
-	la $a1, spaces
-	li $a2, 10000
-	syscall
 	
 	#Abre archivo de escritura
 	li $v0, 13
@@ -294,15 +279,14 @@ sinespacio:
 	li $a2, 0
 	syscall
 	
-	add $s1, $v0, $zero		#Descriptor de "sinespacio.txt"
+	add $s0, $v0, $zero		#Descriptor de "sinespacio.txt"
 	
 	#Variables necesarias para escribir
-	la $s2, spaces
 	addi $t2, $t2, 32		#Espacio en blanco a eliminar
 	addi $t3, $t3, 10		#Salto de linea a eliminar
-	add $t0, $s2, $zero		#Base de buffer (lo que haya en el archivo "Text.txt")
+	add $t0, $s1, $zero		
 	
-	add $a0, $s1, $zero		#Descriptor de "sinespacio.txt" copiado a $a0
+	add $a0, $s0, $zero		#Descriptor de "sinespacio.txt" copiado a $a0
 escritura:				#Escritura en archivo caracter a caracter
 	li $v0, 15
 	la $a1, 0($t0)			#Direccion del buffer
@@ -314,24 +298,19 @@ escritura:				#Escritura en archivo caracter a caracter
 	syscall				#Escribe en el archivo el caracter leido
 	bne $t1, $zero, escritura	#Termina sinespacio cuando se halla al caracter nulo
 	
-	#Cerrando los archivos	
-	add $a0, $s1, $zero
-	li $v0, 16
-	syscall			#Cierra "sinespacio.txt"
-	
-readerror:	
+	#Cerrando archivo escritura
 	add $a0, $s0, $zero
 	li $v0, 16
-	syscall			#Cierra "Texto.txt"
-	
+	syscall			#Cierra "sinespacio.txt"
+
+	#Return to caller
 	lw $s0, 0($sp)
 	lw $s1, 4($sp)
-	lw $s2, 8($sp)
-	lw $v0, 12($sp)
-	addi $sp, $sp, 16
+	lw $v0, 8($sp)
+	addi $sp, $sp, 12
 	
 	jr $ra
-
+	
 exit: 	li $v0, 10		# Constante para terminar el programa
 	syscall			
 
