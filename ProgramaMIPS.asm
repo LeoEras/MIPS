@@ -2,6 +2,7 @@
 buffer: .space 255			# "buffer" contendrá¡ la dirección base al string del archivo
 file: .space 255 			# Dirección absoluta del archivo
 fwrite:	.asciiz "sinespacio.txt"     	# Archivo que arroja la funcion definida sinespacio
+fwrite2:.asciiz "alreves.txt"     	# Archivo que arroja la funcion definida sinespacio
 
 #text messages
 errortext:      .asciiz "Ha ingresado un valor no valido\n"
@@ -14,7 +15,7 @@ numberOfWords: .asciiz "\n El número de palabras es: "
 numberOfWordsMore: .asciiz "\n El número de palabras con más de "
 numberOfWordsMoreCont: .asciiz " caracteres es: "
 pedirArchivo: .asciiz "\n Ingrese la dirección absoluta del archivo a abrir:\n"
-sinespacioMessage: .asciiz "Archivo creado con exito!\n"
+successMessage: .asciiz "Archivo creado con exito!\n"
 
 
 #Title
@@ -147,7 +148,7 @@ numcaracter:
 		la $a0, TitleOp2text
 		syscall
 		jal sinespacio
-		la $a0, sinespacioMessage
+		la $a0, successMessage
 		syscall
 		li $v0, 4
 		la $a0, continueMessage
@@ -157,13 +158,17 @@ numcaracter:
 		j Bucle	
 	Al_Reves:	
 		li $v0, 4	# Se carga el numero 4 para indicar que la funcion SYSCALL va a imprimir un texto.
-		la $a0, TitleOp3text
+		la $a0, TitleOp2text
 		syscall
+		jal alreves
+		la $a0, successMessage
+		syscall
+		li $v0, 4
 		la $a0, continueMessage
 		syscall
 		li $v0, 12	# Se carga el numero 12 para indicar que la funcion SYSCALL va a leer un char.
 		syscall
-		j Bucle
+		j Bucle	
 	Cargar_Archivo:
 		j main
 	About:
@@ -283,10 +288,6 @@ sinespacio:
 	sw $s1, 4($sp)
 	sw $s0, 0($sp)
 	
-	add $s1, $a1, $zero		#Copia de buffer de archivo leido para usar en esta funcion
-	add $t2, $zero, $zero
-	add $t3, $zero, $zero
-	
 	#Abre archivo de escritura
 	li $v0, 13
 	la $a0, fwrite
@@ -297,8 +298,8 @@ sinespacio:
 	add $s0, $v0, $zero		#Descriptor de "sinespacio.txt"
 	
 	#Variables necesarias para escribir
-	addi $t2, $t2, 32		#Espacio en blanco a eliminar
-	addi $t3, $t3, 10		#Salto de linea a eliminar
+	addi $t2, $zero, 32		#Espacio en blanco a eliminar
+	addi $t3, $zero, 10		#Salto de linea a eliminar
 	add $t0, $s1, $zero		
 	
 	add $a0, $s0, $zero		#Descriptor de "sinespacio.txt" copiado a $a0
@@ -326,4 +327,46 @@ escritura:				#Escritura en archivo caracter a caracter
 	
 	jr $ra
 		
+#Subrutine Alreves:
+alreves:
+	addi $sp, $sp, -12
+	sw $v0, 8($sp)
+	sw $s1, 4($sp)
+	sw $s0, 0($sp)
+	
+	add $t1, $s1, $s0		#Ultimo elemento del buffer de archivo
+	addi $t1, $t1, -1
+	
+	#Abre archivo de escritura
+	li $v0, 13
+	la $a0, fwrite2
+	li $a1, 1
+	li $a2, 0
+	syscall
+	
+	add $s0, $v0, $zero		#Descriptor de "alreves.txt"
+	
+	#Variables necesarias para escribir
+	add $t0, $s1, $zero		#Base del buffer
+	add $a0, $s0, $zero		#Descriptor de "alreves.txt" copiado a $a0
+escritura2:				#Escritura en archivo caracter a caracter
+	li $v0, 15
+	la $a1, 0($t1)			#Direccion del buffer
+	li $a2, 1			#Longitud a escribir (1 caracter a la vez)
+	addi $t1, $t1, -1		#$t1 = $t1 - 1 
+	syscall				#Escribe en el archivo el caracter leido
+	slt $t2, $t1, $t0		
+	beq $t2, $zero, escritura2	#Termina sinespacio cuando $t1(Recorrido) < t0(Base del buffer)
+	
+	#Cerrando archivo escritura
+	add $a0, $s0, $zero
+	li $v0, 16
+	syscall			#Cierra "sinespacio.txt"
 
+	#Return to caller
+	lw $s0, 0($sp)
+	lw $s1, 4($sp)
+	lw $v0, 8($sp)
+	addi $sp, $sp, 12
+	
+	jr $ra
